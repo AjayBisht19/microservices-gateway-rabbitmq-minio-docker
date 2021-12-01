@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<aop-reference-model>
+<aop-project name="FileDelete"/>
+<aop-project name="Jenkins-project"/>
+<aop-project name="Test-2"/>
+<aop-project name="FilePost"/>
+<aop-project name="Eureka-service"/>
+<aop-project name="firstOnGitlab"/>
+<aop-project name="Test"/>
+<aop-project name="Spring-Cloud"/>
+<aop-project name="spring-boot-security-jwt-mongodb"/>
+<aop-project name="secondOnGitlab"/>
+<aop-project name="File-Handler"/>
+<aop-project name="demo"/>
+<aop-project name="consumer"/>
+<aop-project name="sonarQubeDemo"/>
+<aop-project name="FileUpdate"/>
+</aop-reference-model>

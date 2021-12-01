@@ -1,0 +1,49 @@
+
+---------------------------------------------------------------------------------------
+*docker-compose.yml of minio (private.crt and public.key files in /home/dmadmin/minio)
+-> ref. https://stackoverflow.com/questions/50878454/using-https-for-minio-server
+---------------------------------------------------------------------------------------
+version: '3'
+
+services:
+  minio:
+    image: store/minio/minio:RELEASE.2020-12-29T23-29-29Z
+    command: server --address ":443" /data
+    ports:
+      - "440:443"
+    environment:
+      MINIO_ACCESS_KEY: "miniodocker"
+      MINIO_SECRET_KEY: "miniodocker"
+    volumes:
+      - /home/dmadmin/minio/.:/root/.minio/certs
+
+
+
+
+---------------------------------------------------------------------------------------
+*docker-compose.yml of keycloak (client.crt and client.key files in same location of docker-compose.yml file)
+-> ref. https://www.youtube.com/watch?v=yq1hzNs1JQU
+---------------------------------------------------------------------------------------
+
+services:
+        keycloak:
+                image: jboss/keycloak
+                command: -c standalone.xml
+                environment:
+                        DB_VENDOR: h2
+                        KEYCLOAK_USER: admin
+                        KEYCLOAK_PASSWORD: admin
+                ports:
+                        - 8380:8080
+                        - 8440:8443
+                volumes:
+                        - ./client.crt:/etc/x509/https/tls.crt
+                        - ./client.key:/etc/x509/https/tls.key
+
+
+
+---------------------------------------------------------------------------------------
+*https in tomcat
+---------------------------------------------------------------------------------------
+
+-> ref. https://www.youtube.com/watch?v=RaEG_DOpNPc

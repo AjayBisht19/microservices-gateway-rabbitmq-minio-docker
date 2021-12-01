@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="MavenProjectImportWizardPage">
+		<list key="rootDirectory">
+			<item value="D:\zz\eoffice_backend-master"/>
+			<item value="D:\JenkinsWork\newjenkinsproject"/>
+			<item value="C:\Users\Ajay\Documents\demo"/>
+			<item value="C:\Users\Ajay\Downloads\consumer"/>
+			<item value="D:\File-handler\Filehandler-Rabbitmq-Consumer"/>
+			<item value="D:\File-handler\FileUpdate"/>
+			<item value="D:\File-handler\FilePost"/>
+			<item value="D:\File-handler\File-Handler"/>
+			<item value="D:\File-handler\FileDelete"/>
+			<item value="D:\File-handler\Spring-Cloud"/>
+			<item value="D:\File-handler\Eureka-service"/>
+		</list>
+		<list key="projectNameTemplate">
+			<item value="[artifactId]"/>
+			<item value="[artifactId]-TRUNK"/>
+			<item value="[artifactId]-[version]"/>
+			<item value="[groupId].[artifactId]"/>
+			<item value="[groupId].[artifactId]-[version]"/>
+			<item value="[name]"/>
+		</list>
+	</section>
+	<section name="org.eclipse.m2e.core.pom.overview">
+	</section>
+	<section name="org.eclipse.m2e.core.pom.dependencies">
+	</section>
+</section>

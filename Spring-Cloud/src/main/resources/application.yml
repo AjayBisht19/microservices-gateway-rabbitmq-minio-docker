@@ -1,0 +1,82 @@
+server:
+  port: 8090
+
+
+eureka:
+  client:
+    serviceUrl:
+#       defaultZone: http://localhost:8095/eureka
+       defaultZone: http://eureka-server:8095/eureka
+
+
+app:
+  config:
+    keycloak:
+#       url: http://localhost:8180/auth
+#       realm: demo
+      url: http://keycloak:8080/auth
+      realm: demo
+
+
+
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedHeaders: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+        add-to-simple-url-handler-mapping: true
+      routes:
+        - id: fileModule
+          uri: http://reader-container:8081/
+#          uri: http://localhost:8081/
+          predicates:
+            - Path=/file/**
+        - id: filePost
+          uri: http://upload-container:8085/
+#          uri: http://localhost:8085/
+          predicates:
+            - Path=/add-file/**
+        - id: fileDelete
+          uri: http://delete-container:8083/
+#          uri: http://localhost:8083/
+          predicates:
+            - Path=/delete-file/**
+        - id: fileUpdate
+          uri: http://update-container:8084/
+#          uri: http://locahost:8084/
+          predicates:
+            - Path=/update-file/**
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            token-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/token
+            authorization-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/auth
+            user-name-attribute: preferred_username
+            user-info-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/userinfo
+            jwk-set-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/certs
+            user-info-authentication-method: header
+        registration:
+          FileHandlerGateway:
+            provider: keycloak
+            client-id: FileHandlerGateway
+            client-secret: 83cc78c0-1cb3-4f3d-8ee4-7b7b20b4aa7f
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/keycloak"
+            scope: openid
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/certs
+

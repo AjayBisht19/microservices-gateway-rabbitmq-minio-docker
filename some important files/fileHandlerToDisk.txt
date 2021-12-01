@@ -1,0 +1,157 @@
+///Read file
+
+@Service
+public class FileServiceImpl implements FileService {
+
+
+    @Autowired
+    private FileRepository fileRepository;
+
+
+
+    @Override
+    public ResponseEntity getFile(String fileId,String userId)  {
+        Optional<FileDocument> byId = fileRepository.findById(fileId);
+
+        InputStreamResource resource=null;
+        if (byId.isEmpty()){
+            return ResponseEntity.badRequest().body("No file found");
+        }else{
+            FileDocument fileDocument = byId.get();
+
+            if(!isUserAuthorized(userId)&&fileDocument.getUser()!=userId){
+                return new ResponseEntity<>(
+                        "Unauthorized request",
+                        HttpStatus.UNAUTHORIZED);
+            }
+            
+            
+            
+            String fileLocation = new File("D:\\File-handler\\File-Handler\\src\\main\\resources\\static\\uploads") + "\\" + fileDocument.getId();
+            
+            byte[] bytes=null;
+            HttpHeaders httpHeaders = new HttpHeaders();
+//            httpHeaders.set("Content-Disposition","attachment; filename=" +fileDocument.getFileName());
+            httpHeaders.set("Content-Type",fileDocument.getType());
+            try{
+                 bytes=new FileInputStream(fileLocation).readAllBytes();
+
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+
+            return ResponseEntity.ok().headers(httpHeaders).body(bytes);
+
+        }
+    }
+
+
+
+    @Override
+    public ResponseEntity getAllFilesByUser(String userId) {
+
+        if(!isUserAuthorized(userId)){
+            return new ResponseEntity<>(
+                    "Unauthorized request ",
+                    HttpStatus.UNAUTHORIZED);
+        }
+        return ResponseEntity.ok(fileRepository.findAllByUser(userId));
+    }
+
+    public boolean isUserAuthorized(String userId) {
+        System.out.println(FileController.loggedInUser+" : "+ userId);
+
+        if (!userId.equals(FileController.loggedInUser))
+        {            return false;
+        }
+        return true;
+    }
+
+
+
+}
+
+
+
+
+
+
+///write file code
+  public ResponseEntity<?> addFile(@RequestParam("file") MultipartFile multipartFile,@RequestParam("user") String user){
+		FileDocument file1 = new FileDocument();
+        file1.setFileName(multipartFile.getOriginalFilename());
+        file1.setUser(user);
+        file1.setType(multipartFile.getContentType());
+        file1.setCreatedAt(new Date());
+        FileDocument save = fileRepository.save(file1);
+    String fileLocation = new File("D:\\File-handler\\File-Handler\\src\\main\\resources\\static\\uploads") + "\\" + save.getId();
+
+    try {
+
+    FileOutputStream output = new FileOutputStream(fileLocation);
+
+    output.write(multipartFile.getBytes());
+
+    output.close();
+    }catch(Exception e){
+        e.printStackTrace();
+    }
+    System.out.println("in post service");
+    return new ResponseEntity<>(save,HttpStatus.CREATED);
+    }
+
+
+
+
+//delete file
+
+public ResponseEntity<?> deleteFile(@PathVariable("fileId") String fileId, @RequestParam("user") String userId) {
+		Optional<FileDocument> byId = fileRepository.findById(fileId);
+		if (byId.isEmpty()) {
+			return ResponseEntity.badRequest().body("no file found");
+		} else {
+			FileDocument fileDocument = byId.get();
+
+			String fileLocation = new File("D:\\File-handler\\File-Handler\\src\\main\\resources\\static\\uploads").getAbsolutePath()
+					+ "\\" + fileDocument.getId();
+			File file = new File(fileLocation);
+			System.out.println(file+" : "+fileLocation);
+			file.delete();
+			fileRepository.delete(fileDocument);
+			System.out.println("in delete service");
+			return ResponseEntity.ok("file deleted");
+
+		}
+	}
+
+
+
+
+///Update file code
+
+public ResponseEntity<?> updateFile(@RequestParam("file") MultipartFile multipartFile,
+			@PathVariable("fileId") String fileId, @RequestParam("user") String userId) {
+		Optional<FileDocument> byId = fileRepository.findById(fileId);
+		if (byId.isEmpty()) {
+			return ResponseEntity.badRequest().body("no file found");
+		} else {
+			FileDocument file1 = byId.get();
+
+			file1.setFileName(multipartFile.getOriginalFilename());
+			file1.setType(multipartFile.getContentType());
+			String fileLocation = new File("D:\\File-handler\\File-Handler\\src\\main\\resources\\static\\uploads") + "\\" + fileId;
+
+			try {
+				FileOutputStream output = new FileOutputStream(fileLocation);
+
+				output.write(multipartFile.getBytes());
+
+				output.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			System.out.println("in update service");
+
+			return ResponseEntity.ok(fileRepository.save(file1));
+		}
+	}

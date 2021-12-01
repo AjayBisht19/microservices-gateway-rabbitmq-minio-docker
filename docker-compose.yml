@@ -1,0 +1,153 @@
+version: '3.4'
+
+services:
+
+  keycloak_modified:
+    image: ajayb381/keycloak_image
+    container_name: keycloak_modified
+    networks:
+      - file-handler-network
+    hostname: keycloak
+    ports:
+      - 8080:8080
+
+  minio-service:
+    image: store/minio/minio:RELEASE.2020-12-29T23-29-29Z
+    container_name: minio-service
+    hostname: minio-service
+    networks:
+      - file-handler-network
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      - MINIO_ACCESS_KEY=miniodocker
+      - MINIO_SECRET_KEY=miniodocker
+      - MINIO_IDENTITY_OPENID_CONFIG_URL=http://localhost:8080/auth/realms/demo/.well-known/openid-configuration
+      - MINIO_IDENTITY_OPENID_CLIENT_ID="FileHandlerGateway"
+    command: server /data
+    depends_on:
+      - keycloak_modified
+
+  api_gateway:
+    build: ./Spring-Cloud
+    ports: 
+      - 8090:8090
+    networks:
+      - file-handler-network   
+    links:
+      - keycloak_modified
+    depends_on:
+      - keycloak_modified
+      - eureka-server
+
+  rabbitmq-service:
+    image: rabbitmq:3-management
+    ports:
+      - 15672:15672
+      - 5672:5672
+    hostname: rabbitmq-service
+    container_name: rabbitmq-service
+    networks:
+      - file-handler-network
+
+  mongo-container:
+    image: mongo
+    container_name: mongo-container
+    networks:
+      - file-handler-network
+    ports:
+      - 27017:27017
+
+  eureka-server:
+    build:
+      context: ./Eureka-service
+    networks:
+      - file-handler-network    
+    hostname: eureka-server  
+    container_name: eureka-server
+    ports:
+      - 8095:8095
+
+  reader-container:
+    build: ./File-Handler
+    ports: 
+      - 8081:8081
+    networks:
+      - file-handler-network
+    hostname: reader-container   
+    container_name: reader-container
+    links:
+      - mongo-container
+    depends_on:
+      - mongo-container
+      - eureka-server 
+  
+  upload-container:
+    build: ./FilePost
+    ports: 
+      - 8085:8085
+    networks:
+      - file-handler-network
+    environment:
+      - spring.rabbitmq.addresses=rabbitmq-service:5672
+    hostname: upload-container   
+    container_name: upload-container
+    links:
+      - mongo-container
+      - rabbitmq-service
+    depends_on:
+      - mongo-container
+      - eureka-server 
+      - rabbitmq-service
+
+  delete-container:
+    build: ./FileDelete
+    ports: 
+      - 8083:8083
+    networks:
+      - file-handler-network
+    hostname: delete-container   
+    container_name: delete-container
+    links:
+      - mongo-container
+    depends_on:
+      - mongo-container
+      - eureka-server 
+
+  update-container:
+    build: ./FileUpdate
+    ports: 
+      - 8084:8084
+    networks:
+      - file-handler-network
+    hostname: update-container   
+    container_name: update-container
+    links:
+      - mongo-container
+    depends_on:
+      - mongo-container
+      - eureka-server 
+
+  consumer-container:
+    build: ./consumer
+    ports: 
+      - 8086:8086
+    networks:
+      - file-handler-network
+    hostname: consumer-container   
+    container_name: consumer-container
+    environment:
+      - minio.url=http://minio-service:9000
+      - minio.access.name=miniodocker
+      - minio.access.password=miniodocker
+      - spring.rabbitmq.addresses=rabbitmq-service:5672
+    links:
+      - rabbitmq-service
+    depends_on:
+      - rabbitmq-service
+      - eureka-server
+      - upload-container   
+
+networks: 
+  file-handler-network:

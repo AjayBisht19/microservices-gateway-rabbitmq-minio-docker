@@ -1,0 +1,142 @@
+->Steps for creating jenkins pipeline
+
+									---------------Backend---------------------
+
+1) Now after setting up jenkins 
+	a) set up maven in jenkins
+		Go to manage jenkins -> Global Tool Configuration and set up maven
+	b) Install required suggested plugins and also docker pipeline plugin for using agent docker (required in react application) 
+	c) plugins directory in jenkins container is (var/jenkins_home/plugins) required when setting up jenkins offline (copy and paste plugins in this directory)
+
+2) Now upload your souce code with Dockerfile (the Dockerfile should be in root directory of source code) in gitlab/azure
+	- Dockerfile (using tomcat image and in that image uploading war file of source code to webapps folder after maven install step)
+		From tomcat:8.0.51-jre8-alpine
+		COPY ./target/test-1.war /usr/local/tomcat/webapps/test-1.war			// war file name should be changed at developers end 
+		CMD ["catalina.sh","run"]
+
+
+3) Steps for executing pipeline 
+	-create a job as pipeline
+	-use below pipeline 
+
+pipeline {
+    
+   agent any
+   tools {
+        maven 'm3'		// we need to access this for maven commands (m3 is the name of maven configured above in step 1)
+    }
+    	
+    stages{
+        stage("checkout"){
+            steps {
+                git branch: 'main', url: 'https://gitlab.com/ajay/backend.git'			// command use to clone repository from gitlab/azure 
+            }
+        }
+        
+        stage("build"){
+            steps {
+                sh 'mvn -o clean install -DskipTests'							// command to build maven project offline and skip tests
+            }
+        }
+        
+        stage ("docker"){
+            steps {
+                sh 'docker build -t e-office:$BUILD_NUMBER .'						// command to build docker image from steps mentioned in Dockerfile in repository
+                sh 'docker run -d -p 80$BUILD_NUMBER:8080 e-office:$BUILD_NUMBER'			// command to run the docker container of the image created in above step
+            }		
+        }
+    }    
+}
+
+4) Now the above project will run on port 80$BUILD_NUMBER (BUILD_NUMBER is a variable which will keep on changing as per our number of build deployed)
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+									---------------Frontend-------------------
+
+
+1) Now upload your souce code with Dockerfile (the Dockerfile should be in root directory of source code) in gitlab/azure
+	- Dockerfile (using nginx image and in that image uploading build directory files of source code to /usr/share/nginx/html/eoffice folder)
+	A) If we are using homepage url in package.json,  we can change folder name as per requirement 
+
+		FROM nginx:1.20.1-alpine
+		RUN mkdir /usr/share/nginx/html/eoffice					
+		COPY /build /usr/share/nginx/html/eoffice				
+		COPY /build/index.html /usr/share/nginx/html
+
+	B) If homepage url is not there then execute these commands
+
+		FROM nginx:1.20.1-alpine
+		COPY /build /usr/share/nginx/html
+
+2) Steps for executing pipeline 
+	-create a job as pipeline
+	-use below pipeline 
+	
+pipeline {
+    agent any
+    stages {
+        stage('Setup parameters') {				//  provides dropdown to change environment
+            steps {
+                script { 
+                    properties([
+                        parameters([
+                            choice(
+                                choices: ['DEV', 'UAT'], 
+                                name: 'ENVIRONMENT'
+                            )
+                            
+                        ])
+                    ])
+                }
+            }
+        }
+        
+        stage("checkout"){					// stage to clone git repository
+            steps {
+               git branch: 'main', url: 'https://gitlab.com/ajay/frontend.git'
+            }
+        }
+        
+                stage("DEV") {								// stage to override .env and package.json file according to environment selected
+                    when { expression { params.ENVIRONMENT == 'DEV' } }
+                    steps {
+                        sh 'cp -r /opt/jenkins/DEV/. .'
+                    }
+                }
+                stage("UAT") {
+                    when { expression { params.ENVIRONMENT == 'UAT' } }
+                    steps {
+                        sh 'cp -r /opt/jenkins/Templates/UAT/. .'
+                    }
+                }
+                
+    
+        stage('build') {   							// stage to build react project using node:14 docker image
+            agent {
+                docker {
+                    image 'node:14-alpine'
+                    args '-p 3000:3000'
+                    reuseNode true
+                }
+        }
+            steps {
+                sh 'chmod +x node_modules/.bin/react-scripts'
+                sh 'npm rebuild node-sass'
+                sh 'npm run build'
+            }
+        }
+        stage('docker') {
+            steps {
+                sh 'docker build -t eoffice-frontend:$BUILD_NUMBER .'					// command to build docker image from steps mentioned in Dockerfile in repository
+                sh 'docker run -d -p 8$BUILD_NUMBER:80 eoffice-frontend:$BUILD_NUMBER'			// command to run the docker container of the image created in above step
+            }
+        }
+    }
+}
+
+4) Now the above project will run on port 8$BUILD_NUMBER (BUILD_NUMBER is a variable which will keep on changing as per our number of build deployed)
+
+
+		

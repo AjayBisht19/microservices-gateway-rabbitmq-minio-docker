@@ -1,0 +1,103 @@
+1). Identify linux version.
+	-- uname -r 
+
+2). Installation of packages (docker)
+	sudo yum install containerd.io-1.4.6-3.1.el8.s390x.rpm docker-ce-20.10.7-3.el8.s390x.rpm docker-ce-rootless-extras-20.10.7-3.el8.s390x.rpm docker-ce-cli-20.10.7-3.el8.s390x.rpm
+	rpm -ivh containerd.io-1.4.6-3.1.el8.s390x.rpm docker-ce-20.10.7-3.el8.s390x.rpm docker-ce-rootless-extras-20.10.7-3.el8.s390x.rpm docker-ce-cli-20.10.7-3.el8.s390x.rpm
+3). To get permission
+	sudo chmod 777 /var/run/docker.sock
+
+4). Checking the status of docker servers
+	systemctl status docker.service
+	systemctl stop docker.service
+	systemctl start docker.service
+
+5). To upload docker images offline
+	1) download docker image in local computer(which has access of internet) 
+	2) use docker save -o tar_file_name.tar docker_image_name    	//command to convert docker image to tar file
+	3) upload above tar file in server in a directory ..
+	4) docker load --input tar_file_name (e.g. docker load --input apache-tomcat-8.5.64.tar.gz)   //command to convert tar file into docker image
+
+6). Install jenkins (using docker image) with access of docker 
+		Steps 1 and 2 are to be done in local system (having access to internet)
+	
+		1). create a Dockerfile in a directory with content- 				
+				FROM jenkins/jenkins:lts
+				USER root
+				RUN curl -sSL https://get.docker.com/ | sh
+				USER jenkins
+		2). run this cmd in same directory (to build an image(named jenkins-in-docker) using steps mentioned in Dockerfile)
+				docker build -t jenkins-in-docker .
+		
+		3) upload above tar file in server in a directory ..
+
+		4) docker load --input tar_file_name 
+
+		5). finally running container of this image 
+				docker run --name jenkins -d -p 8180:8080 -p 50001:50000 --group-add 0 -v /home/dmadmin/Templates/jenkins_home_2:/var/jenkins_home -v /var/run/docker.sock:/var/run/docker.sock jenkins-docker
+			--in windows
+				docker run --name jenkins-lts -d -p 8080:8080 -p 50000:50000 --group-add 0 -v "any location in server":/var/jenkins_home -v "//var/run/docker.sock:/var/run/docker.sock" jenkins-docker
+		
+	for reference please visit to this-> https://www.youtube.com/watch?v=h15Mh9FDMLo
+
+8) Now open the browser and redirect to url (http://server_ip:port_number) for jenkins configuration
+
+7). Now after setting up jenkins 
+	1). set up maven in jenkins
+		Go to manage jenkins -> Global Tool Configuration set up maven with the required version
+	2). Install required plugins docker pipeline too for using agent docker (required in react application) 
+
+8). Now upload your souce code with Dockerfile 
+	- Dockerfile (using tomcat image and in that image uploading war file of source code to webapps folder after maven install step)
+		From tomcat:8.0.51-jre8-alpine
+		RUN rm -rf /usr/local/tomcat/webapps/*
+		COPY ./target/test-1.war /usr/local/tomcat/webapps/test-1.war
+		CMD ["catalina.sh","run"] 
+
+9). Build pipeline in jenkins
+
+pipeline{
+    
+    	agent any
+   	tools {
+        	maven 'm3'		//name given to our maven configured in jenkins
+    	}
+	
+	stage("checkout"){
+            steps {
+                git branch: 'aman', credentialsId: 'gitlab-credentials', url: 'http://11.0.0.141/aman/eoffice_backend.git'   //this step will clone this repository with specified branch in the workspace of the build in which all the commands will run 
+            }
+        }
+    		
+    
+    stages{
+        
+        stage("compile"){
+            steps {
+                bat 'mvn compile -DskipTests'			//compile maven project
+            }
+        }
+                
+        stage("build"){
+            steps {
+                bat 'mvn clean install -DskipTests'		//create war file
+            }
+        }
+
+
+        stage("unit testing"){
+            steps {
+                bat 'mvn test'					//running unit test 
+            }
+        }
+        
+       
+        stage('dockerize'){											//build number variable used which is just a number represent count of build
+            steps {
+                bat 'docker build -t second_decl:%BUILD_NUMBER% .'						//this cmd will create docker image according to the Dockerfile present in the workspace
+                bat 'docker run -d -p 200%BUILD_NUMBER%:2000 second_decl:%BUILD_NUMBER%'			//this cmd will create container of image and run it at specified port
+            }
+        }
+       
+    }
+}

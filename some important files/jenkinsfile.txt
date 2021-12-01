@@ -1,0 +1,58 @@
+pipeline{
+    
+    agent any
+    tools {
+        maven 'm2'
+    }
+    
+    stages{
+        
+        stage("checkout"){
+            steps {
+                checkout([$class: 'GitSCM', branches: [[name: '**']], extensions: [], userRemoteConfigs: [[url: 'https://gitlab.com/ajaybisht1904/jenkins-testing.git']]])
+            }
+        }
+        
+        stage("compile"){
+            steps {
+                bat 'mvn compile -DskipTests'
+            }
+        }
+        stage("check branch"){
+            steps {
+                echo env.BRANCH_NAME
+            }
+        }
+        
+        stage("build"){
+            steps {
+                bat 'mvn clean package -DskipTests'
+            }
+        }
+        stage("unit testing"){
+            steps {
+                bat 'mvn test'
+            }
+        }
+        stage('dev-deploy to tomcat'){
+            steps {
+                deploy adapters: [tomcat9(credentialsId: 'e2e71566-b08f-4f27-8f04-91c4e468f07c', path: '', url: 'http://localhost:9494/')], contextPath: null, war: 'target/*.war'
+            }
+        }
+        stage('approval for prod after UAT'){
+            steps {
+                echo "approval for prod after UAT"
+                timeout(time: 1, unit: 'DAYS'){
+                    input message: 'Do you want to approve it for prod?', submitter: 'admin'
+                }
+            }
+        }
+        stage('dockerize'){
+            steps {
+                bat 'docker build -t first_dec_docker:%BUILD_NUMBER% .'
+                bat 'docker run -d -p 100%BUILD_NUMBER%:1000 first_dec_docker:%BUILD_NUMBER%'
+            }
+        }
+       
+    }
+}

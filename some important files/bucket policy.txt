@@ -1,0 +1,29 @@
+public String bucketPolicy(String bucket)
+	{
+		Policy bucket_policy = new Policy().withStatements(new Statement(Statement.Effect.Allow)
+				.withPrincipals(Principal.AllUsers)
+				.withActions(S3Actions.GetObject)
+				.withResources(new Resource("arn:aws:s3:::" + bucket+ "/*")));
+		return bucket_policy.toJson();
+	}
+
+if (!awsClient.doesBucketExist(role))
+			{
+				awsClient.createBucket(role);
+				String policy = bucketPolicy(role);
+				awsClient.setBucketPolicy(role,policy);
+			}
+
+
+---------------------------------------------------------------
+
+
+-> formatting deadline (send as string)
+-> add status(draft = "draft"/"sent") @
+-> type of service to array  @
+-> minio bucket policy  @
+-> creation of groups as departments, user as username and role as profile of user
+-> create bucket automatically asa project starts @
+
+
+---------------------------------------------------------------

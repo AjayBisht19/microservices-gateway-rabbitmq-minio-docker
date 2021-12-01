@@ -1,0 +1,66 @@
+pipeline{
+    
+    agent any
+    tools {
+        maven 'm2'
+    }
+    triggers {
+    	pollSCM('* * * * *') 
+    }
+    
+    stages{
+        
+        stage("check branch"){
+            steps {
+                echo BRANCH_NAME
+            }
+        }
+        
+        stage("compile"){
+            steps {
+                bat 'mvn compile -DskipTests'
+            }
+        }
+                
+        stage("build"){
+            steps {
+                bat 'mvn clean package -DskipTests'
+            }
+        }
+        stage("unit testing"){
+            steps {
+                bat 'mvn test'
+            }
+        }
+        
+        stage('approval for dev before UAT'){
+            steps {
+                echo "approval for dev before UAT"
+                timeout(time: 1, unit: 'DAYS'){
+                    input message: 'Do you want to approve it for dev?', submitter: 'admin'
+                }
+            }
+        }
+        
+        stage('dev-deploy to tomcat'){
+            steps {
+                deploy adapters: [tomcat9(credentialsId: 'e2e71566-b08f-4f27-8f04-91c4e468f07c', path: '', url: 'http://localhost:9494/')], contextPath: null, war: 'target/*.war'
+            }
+        }
+        stage('approval for prod after UAT'){
+            steps {
+                echo "approval for prod after UAT"
+                timeout(time: 1, unit: 'DAYS'){
+                    input message: 'Do you want to approve it for prod?', submitter: 'admin'
+                }
+            }
+        }
+        stage('dockerize'){
+            steps {
+                bat 'docker build -t second_decl:%BUILD_NUMBER% .'
+                bat 'docker run -d -p 200%BUILD_NUMBER%:2000 second_decl:%BUILD_NUMBER%'
+            }
+        }
+       
+    }
+}

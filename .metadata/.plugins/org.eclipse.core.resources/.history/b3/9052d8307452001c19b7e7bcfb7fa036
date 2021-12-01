@@ -1,0 +1,24 @@
+#SPRING BOOT CONF
+spring.application.name=rabbitmq-consumer
+server.port=8086
+
+
+
+#EUREKA CONF
+eureka.client.serviceUrl.defaultZone= http://eureka-server:8095/eureka/
+
+
+#MINIO CONF
+minio.bucket.name=test
+minio.access.name=minioadmin
+minio.access.secret=minioadmin
+minio.url=http://localhost:9000
+
+
+#MULTIPART CONF
+spring.servlet.multipart.max-file-size=-1
+spring.servlet.multipart.max-request-size=-1
+
+
+
+spring.rabbitmq.addresses = rabbitmq-service:5672

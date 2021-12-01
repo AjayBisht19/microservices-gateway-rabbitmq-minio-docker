@@ -1,0 +1,26 @@
+								
+										-----------------Backend-------------------
+
+1) Upload your souce code with Dockerfile (the Dockerfile should be in root directory of source code) in gitlab/azure
+	- Dockerfile (using tomcat image and in that image uploading war file of source code to webapps folder after maven install step)
+		From tomcat:8.0.51-jre8-alpine
+		COPY ./target/test-1.war /usr/local/tomcat/webapps/test-1.war			// war file name should be changed at developers end 
+		CMD ["catalina.sh","run"]
+
+
+										-----------------Frontend-------------------
+
+
+1) Upload your souce code with Dockerfile (the Dockerfile should be in root directory of source code) in gitlab/azure
+	- Dockerfile (using nginx image and in that image uploading build directory files of source code to /usr/share/nginx/html/eoffice folder)
+	A) If we are using homepage url in package.json,  we can change folder name as per requirement 
+
+		FROM nginx:1.20.1-alpine
+		RUN mkdir /usr/share/nginx/html/eoffice					
+		COPY /build /usr/share/nginx/html/eoffice				
+		COPY /build/index.html /usr/share/nginx/html
+
+	B) If homepage url is not there then execute these commands
+
+		FROM nginx:1.20.1-alpine
+		COPY /build /usr/share/nginx/html

@@ -1,0 +1,83 @@
+//reactapp
+
+pipeline {
+    agent any
+    stages {
+        stage('Setup parameters') {
+            steps {
+                script { 
+                    properties([
+                        parameters([
+                            choice(
+                                choices: ['DEV', 'UAT'], 
+                                name: 'ENVIRONMENT'
+                            )
+                            
+                        ])
+                    ])
+                }
+            }
+        }
+        
+        stage("checkout"){
+            steps {
+               git credentialsId: 'gitlab-credentials', url: 'http://11.0.0.141/rahul/eoffice-frontend.git'
+            }
+        }
+        
+                stage("DEV") {
+                    when { expression { params.ENVIRONMENT == 'DEV' } }
+                    steps {
+                        sh 'cp -r /opt/jenkins/DEV/. .'
+                    }
+                }
+                stage("UAT") {
+                    when { expression { params.ENVIRONMENT == 'UAT' } }
+                    steps {
+                        sh 'cp -r /opt/jenkins/UAT/. .'
+                    }
+                }
+                
+    
+        stage('build') {
+            agent {
+                docker {
+                    image 'node:14-alpine'
+                    args '-p 3000:3000'
+                    reuseNode true
+                }
+        }
+            steps {
+                sh 'chmod +x node_modules/.bin/react-scripts'
+                sh 'npm rebuild node-sass'
+                sh 'npm run build'
+            }
+        }
+        
+    }
+}
+
+//maven
+
+pipeline {
+    
+    agent any
+   	tools {
+        maven 'm3'	
+    }
+    	
+    stages{
+        stage("checkout"){
+            steps {
+                git credentialsId: 'gitlab-credentials', url: 'http://11.0.0.141/aman/eoffice_backend.git'
+            }
+        }
+        
+        stage("build"){
+            steps {
+                sh 'mvn -o clean install'	
+            }
+        }
+    }
+    
+}
